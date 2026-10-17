@@ -5,46 +5,187 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Operations Under Pressure</title>
 <style>
-:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2128;--mut:#667085;--line:#e3e6eb;--pri:#2457d6;--bad:#b42318;--ok:#067647;--warn:#b54708}
+:root{
+  --paper:#eef1f1;--surface:#ffffff;--sunken:#f5f7f7;--ink:#14202a;--ink2:#52606d;--ink3:#7b8794;
+  --line:#dde3e7;--line2:#c3cbd2;--action:#0b6b73;--action-h:#095a61;--on-action:#ffffff;--focus:#1a73e8;
+  --urgent:#c92f33;--high:#c77a06;--medium:#5d7488;--low:#aab6c0;
+  --st-open:#2f6aa8;--st-in_progress:#a35f00;--st-awaiting_approval:#7447c2;--st-resolved:#2b7a4f;--st-closed:#66727e;
+  --danger-bg:#fde8e8;--danger:#a12226;--info-bg:#e3eef9;--info:#1c4e80;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#0f1519;--surface:#172027;--sunken:#121a20;--ink:#e7edf1;--ink2:#a5b2bd;--ink3:#7d8b97;
+  --line:#26323b;--line2:#34434e;--action:#3fb3bc;--action-h:#58c4cc;--on-action:#06262a;--focus:#7ab7ff;
+  --urgent:#ff6b6e;--high:#f0a43a;--medium:#8aa3b8;--low:#566673;
+  --st-open:#6aa6e6;--st-in_progress:#e0a04a;--st-awaiting_approval:#a98af0;--st-resolved:#5fc48a;--st-closed:#98a5b0;
+  --danger-bg:#3b1a1c;--danger:#ffb4b6;--info-bg:#16293a;--info:#a9cdf2;
+}}
 *{box-sizing:border-box}
-body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
-header{background:#1f2937;color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-header b{font-size:15px}.mut{color:var(--mut)}header .mut{color:#cbd5e1}
-button,input,select,textarea{font:inherit}
-button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 10px;cursor:pointer}
-button:hover:not(:disabled){border-color:var(--pri)}button:disabled{opacity:.5;cursor:default}
-button.primary{background:var(--pri);border-color:var(--pri);color:#fff}
-header button{background:transparent;color:#fff;border-color:#475467}
-input,select,textarea{border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:#fff;max-width:100%}
-textarea{width:100%;min-height:70px}
-main{display:grid;grid-template-columns:minmax(380px,1.1fr) 1fr;gap:14px;padding:14px;align-items:start}
-@media(max-width:900px){main{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}
-.views{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.views button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
-.views .n{background:#e8edf9;color:var(--pri);border-radius:10px;padding:0 6px;margin-left:4px;font-size:12px}
-.views button.on .n{background:#fff}
-.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-table{width:100%;border-collapse:collapse}
-th{text-align:left;color:var(--mut);font-weight:500;font-size:12px;padding:4px 6px}
-td{padding:6px;border-top:1px solid var(--line);vertical-align:top}
-tr.row{cursor:pointer}tr.row:hover{background:#f8fafc}tr.sel{background:#eef3ff}
-.badge{display:inline-block;border-radius:10px;padding:0 8px;font-size:12px;background:#eef0f3}
-.p-urgent{background:#fee4e2;color:var(--bad)}.p-high{background:#fef0c7;color:var(--warn)}
-.s-open{background:#e0eaff}.s-in_progress{background:#fef0c7}.s-awaiting_approval{background:#f4e3ff}.s-resolved{background:#d1fadf}.s-closed{background:#e5e7eb}
-#banner .msg{margin:10px 14px 0;padding:8px 12px;border-radius:6px;background:#fee4e2;color:var(--bad);display:flex;gap:10px;align-items:center;justify-content:space-between}
-#banner .msg.info{background:#e0eaff;color:#1d3a8a}
-.login{max-width:380px;margin:60px auto}.login input{width:100%;margin:4px 0 10px}
-.row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
-.timeline{list-style:none;margin:8px 0 0;padding:0}.timeline li{border-top:1px solid var(--line);padding:6px 0}
-.dd{position:absolute;right:16px;top:44px;background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:8px;width:320px;max-height:320px;overflow:auto;z-index:5}
-.dd div{padding:8px 10px;border-top:1px solid var(--line);cursor:pointer}.dd div:first-child{border-top:0}
-h2{margin:4px 0 6px}details summary{cursor:pointer;margin-bottom:8px;font-weight:500}
-label{display:block;margin:6px 0 2px;color:var(--mut);font-size:12px}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.5 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+[hidden]{display:none!important}
+
+/* controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;padding:0 12px;border:1px solid var(--line2);background:var(--surface);border-radius:4px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--ink3)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.primary{background:var(--action);border-color:var(--action);color:var(--on-action)}
+.btn.primary:hover:not(:disabled){background:var(--action-h);border-color:var(--action-h)}
+.btn.quiet{background:transparent;border-color:transparent;color:var(--ink2)}
+.btn.quiet:hover:not(:disabled){background:var(--sunken);border-color:transparent}
+.btn.block{width:100%}
+input,select,textarea{border:1px solid var(--line2);background:var(--surface);border-radius:4px;padding:0 8px;min-height:32px;max-width:100%}
+textarea{padding:8px;min-height:84px;width:100%;resize:vertical}
+.field{display:block;margin:0 0 12px}
+.field>span{display:block;margin-bottom:4px;color:var(--ink2);font-size:12.5px}
+.field input,.field select{width:100%}
+.row2{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+
+/* login */
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px}
+.login{width:min(430px,100%);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:28px}
+.login h1{font-size:26px;letter-spacing:-.02em;line-height:1.15;margin:16px 0 6px}
+.login .lead{color:var(--ink2);margin-bottom:22px;max-width:36ch}
+.login .err{color:var(--danger);min-height:20px;margin:8px 0 0}
+.demo{margin-top:20px;border-top:1px solid var(--line);padding-top:14px;color:var(--ink2);font-size:12.5px}
+.demo-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.demo-chips button{border:1px solid var(--line2);background:var(--sunken);border-radius:14px;padding:2px 10px;cursor:pointer;font-size:12.5px}
+.demo-chips button:hover{border-color:var(--action)}
+.demo-chips small{color:var(--ink3);margin-left:4px}
+
+/* app frame */
+#app{display:flex;flex-direction:column;height:100vh}
+.top{height:52px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.01em}
+.me{display:flex;align-items:center;gap:10px}
+.who{text-align:right;line-height:1.25}
+.who small{display:block;color:var(--ink2);font-size:12px;max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iconbtn{position:relative;width:36px;padding:0}
+.count{position:absolute;top:0;right:0;min-width:16px;height:16px;border-radius:8px;background:var(--urgent);color:#fff;font-size:10.5px;font-weight:700;line-height:16px;text-align:center;padding:0 4px}
+.dd{position:absolute;right:18px;top:56px;width:340px;max-height:380px;overflow:auto;background:var(--surface);border:1px solid var(--line2);border-radius:6px;box-shadow:0 10px 28px rgba(0,0,0,.16);z-index:20}
+.dd>div{padding:10px 12px;border-top:1px solid var(--line);cursor:pointer}
+.dd>div:first-child{border-top:0}
+.dd>div:hover{background:var(--sunken)}
+.dd small{color:var(--ink3)}
+#banner:empty{display:none}
+#banner .msg{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--danger-bg);color:var(--danger);border-bottom:1px solid var(--line2)}
+#banner .msg.info{background:var(--info-bg);color:var(--info)}
+.shell{flex:1;min-height:0;display:grid;grid-template-columns:208px minmax(0,1fr) minmax(400px,470px)}
+.rail{padding:16px 12px;border-right:1px solid var(--line);overflow:auto}
+.qnav{display:flex;flex-direction:column;gap:2px;margin-top:14px}
+.qnav button{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;border:0;border-left:3px solid transparent;background:transparent;padding:7px 10px;border-radius:0 4px 4px 0;cursor:pointer;color:var(--ink2)}
+.qnav button:hover{background:var(--surface)}
+.qnav button.on{background:var(--surface);color:var(--ink);font-weight:600;border-left-color:var(--action)}
+.qnav .n{font-variant-numeric:tabular-nums;color:var(--ink3);font-weight:500}
+.qnav .n.alert{color:var(--urgent);font-weight:700}
+
+/* queue */
+.queue{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface)}
+.qhead{padding:16px 20px 10px}
+.qhead h1{font-size:20px;letter-spacing:-.015em;line-height:1.25}
+.qhead .meta{color:var(--ink2);font-size:12.5px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--sunken)}
+.search{position:relative;flex:1 1 200px;min-width:160px}
+.search input{width:100%;padding-left:30px}
+.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--ink3);pointer-events:none}
+#list{list-style:none;margin:0;padding:0;overflow:auto;flex:1;min-height:120px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 16px;padding:10px 20px;border-bottom:1px solid var(--line);box-shadow:inset var(--rw,3px) 0 0 var(--rail,transparent);cursor:pointer}
+.row:hover{background:var(--sunken)}
+.row.sel{background:color-mix(in srgb,var(--action) 9%,var(--surface))}
+.p-urgent{--rail:var(--urgent);--rw:6px}.p-high{--rail:var(--high);--rw:4px}.p-medium{--rail:var(--medium);--rw:3px}.p-low{--rail:var(--low);--rw:2px}
+.r-title{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r-sub{display:flex;gap:12px;flex-wrap:wrap;align-items:center;color:var(--ink2);font-size:12.5px}
+.id{font-variant-numeric:tabular-nums}
+.tag{font-weight:700}.tag.urgent{color:var(--urgent)}.tag.high{color:var(--high)}
+.r-side{grid-column:2;grid-row:1 / span 2;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:4px}
+.r-meta{display:flex;align-items:center;gap:8px;color:var(--ink2);font-size:12.5px}
+.due.over{color:var(--danger);font-weight:600}
+.chip{display:inline-block;padding:1px 8px;border-radius:3px;font-size:12px;font-weight:600;color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--surface))}
+.st-open{--c:var(--st-open)}.st-in_progress{--c:var(--st-in_progress)}.st-awaiting_approval{--c:var(--st-awaiting_approval)}.st-resolved{--c:var(--st-resolved)}.st-closed{--c:var(--st-closed)}
+.av{display:inline-grid;place-items:center;flex:none;width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:700;color:#fff;background:hsl(var(--h) 45% 36%)}
+.av.lg{width:28px;height:28px;font-size:11px}
+.av.none{background:transparent;border:1.5px dashed var(--ink3)}
+.empty{padding:36px 20px;color:var(--ink2);text-align:center;cursor:default}
+.empty .btn{margin-top:10px}
+.more{padding:12px 20px;border-top:1px solid var(--line)}
+
+/* detail */
+.detail{overflow:auto;border-left:1px solid var(--line);background:var(--surface)}
+.d-pad{padding:20px 22px 32px}
+.d-empty{padding:48px 28px;color:var(--ink2);max-width:36ch}
+.d-title{font-size:22px;line-height:1.25;letter-spacing:-.015em;font-weight:650}
+.d-id{color:var(--ink2);font-weight:500;font-variant-numeric:tabular-nums;margin-right:8px}
+.pri{display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:var(--ink2);font-size:12.5px}
+.pri i{width:10px;height:10px;border-radius:2px;background:var(--rail)}
+.track{list-style:none;display:flex;margin:20px 0 4px;padding:0}
+.track li{flex:1;position:relative;text-align:center;font-size:11.5px;color:var(--ink3);line-height:1.2}
+.track .node{display:block;width:14px;height:14px;border-radius:50%;margin:0 auto 6px;background:var(--surface);border:2px solid var(--line2);position:relative;z-index:1;transition:background .25s,border-color .25s,box-shadow .25s}
+.track li::before{content:"";position:absolute;top:6px;left:-50%;width:100%;height:2px;background:var(--line2);transition:background .25s}
+.track li:first-child::before{display:none}
+.track li.done,.track li.now{color:var(--ink)}
+.track li.done .node,.track li.now .node{background:var(--action);border-color:var(--action)}
+.track li.done::before,.track li.now::before{background:var(--action)}
+.track li.now{font-weight:700}
+.track li.now .node{box-shadow:0 0 0 4px color-mix(in srgb,var(--action) 24%,transparent)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 0}
+.hint{color:var(--ink2);font-size:12.5px;margin-top:16px}
+.assign{display:flex;gap:8px;margin-top:12px}
+.assign select{flex:1;min-width:0}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:8px 18px;margin:18px 0;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.facts dt{color:var(--ink2)}
+.facts dd{margin:0;display:flex;align-items:center;gap:8px;min-width:0}
+.desc{white-space:pre-wrap;max-width:68ch}
+.desc.none{color:var(--ink3)}
+details.edit{margin-top:14px}
+details.edit summary{cursor:pointer;color:var(--action);font-weight:600;margin-bottom:10px}
+.d-act h3{font-size:15px;margin:24px 0 10px}
+.comment-form{display:flex;gap:8px}
+.comment-form input{flex:1;min-width:0}
+.timeline{list-style:none;margin:16px 0 0;padding:0 0 0 20px;position:relative}
+.timeline::before{content:"";position:absolute;left:5px;top:6px;bottom:8px;width:2px;background:var(--line)}
+.ev{position:relative;padding:0 0 14px}
+.ev::before{content:"";position:absolute;left:-20px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--line2)}
+.ev-status_changed::before{background:var(--action);border-color:var(--action)}
+.ev-assigned::before{border-color:var(--action)}
+.ev-comment::before{border-radius:3px;border-color:var(--ink3)}
+.ev-head{display:flex;justify-content:space-between;gap:12px}
+.ev time{color:var(--ink3);font-size:12px;white-space:nowrap}
+.note{margin-top:6px;padding:8px 10px;background:var(--sunken);border-left:2px solid var(--line2);border-radius:0 4px 4px 0;white-space:pre-wrap;max-width:62ch}
+
+/* overlay + toasts */
+.overlay{position:fixed;inset:0;background:rgba(10,20,28,.5);display:flex;align-items:flex-start;justify-content:center;padding:8vh 16px;z-index:25;overflow:auto}
+.sheet{background:var(--surface);width:min(560px,100%);border-radius:8px;padding:22px 24px}
+.sheet h2{font-size:18px;margin-bottom:14px;letter-spacing:-.01em}
+.sheet .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;display:flex;flex-direction:column;gap:8px;z-index:30;align-items:center}
+.toast{background:var(--ink);color:var(--surface);padding:8px 14px;border-radius:4px}
+
+@media (max-width:1180px){
+  .shell{grid-template-columns:minmax(0,1fr) minmax(360px,430px)}
+  .rail{grid-column:1 / -1;border-right:0;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;padding:10px 16px;overflow:visible}
+  .rail .btn.block{width:auto}
+  .qnav{flex-direction:row;flex-wrap:wrap;margin:0}
+  .qnav button{border-left:0;border-bottom:3px solid transparent;border-radius:4px 4px 0 0;width:auto}
+  .qnav button.on{border-bottom-color:var(--action)}
+}
+@media (max-width:860px){
+  html,body{height:auto}
+  #app{height:auto;min-height:100vh}
+  .shell{display:block}
+  .queue{min-height:60vh}
+  #list{max-height:60vh}
+  .detail{border-left:0;border-top:1px solid var(--line)}
+  .who small{display:none}
+  .row2{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
 <div id="root"></div>
+<div id="toasts" aria-live="polite"></div>
 <script>
 "use strict";
 const S = {
@@ -54,10 +195,37 @@ const S = {
 const root = document.getElementById("root");
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const label = (s) => String(s).replace(/_/g, " ");
+const cap = (s) => { const t = String(s).replace(/_/g, " "); return t.charAt(0).toUpperCase() + t.slice(1); };
 const uuid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : "k-" + Date.now() + "-" + Math.random().toString(16).slice(2));
-const badge = (cls, text) => `<span class="badge ${cls}">${esc(label(text))}</span>`;
-const fmtDate = (d) => (d ? esc(String(d).slice(0, 10)) : "-");
+const hue = (name) => { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+const avatar = (name, cls = "") => name
+  ? `<span class="av ${cls}" style="--h:${hue(name)}" title="${esc(name)}">${esc(String(name).slice(0, 2).toUpperCase())}</span>`
+  : `<span class="av none ${cls}" title="Unassigned"></span>`;
+const fmtDay = (d) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" });
+function dueInfo(i) {
+  if (!i.due_date) return "";
+  const done = i.status === "resolved" || i.status === "closed";
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.round((new Date(i.due_date + "T00:00:00") - today) / 86400000);
+  if (!done && days < 0) return `<span class="due over">Overdue ${-days}d</span>`;
+  return `<span class="due">Due ${esc(fmtDay(i.due_date))}</span>`;
+}
+function ago(ts) {
+  const s = (Date.now() - new Date(ts)) / 1000;
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  if (s < 7 * 86400) return `${Math.floor(s / 86400)} d ago`;
+  return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+const chip = (status) => `<span class="chip st-${esc(status)}">${esc(cap(status))}</span>`;
+const options = (values, anyLabel) => (anyLabel ? `<option value="">${anyLabel}</option>` : "") + values.map((v) => `<option value="${v}">${esc(cap(v))}</option>`).join("");
+const STATUSES = ["open", "in_progress", "awaiting_approval", "resolved", "closed"];
+const PRIORITIES = ["urgent", "high", "medium", "low"];
+const TYPES = ["incident", "customer_issue", "payment", "compliance", "task"];
+const LOGO = '<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="6" style="fill:var(--action)"/><path d="M6 17a7 7 0 0 1 14 0" fill="none" style="stroke:var(--on-action)" stroke-width="2" stroke-linecap="round"/><path d="M13 17l3.5-5" fill="none" style="stroke:var(--on-action)" stroke-width="2" stroke-linecap="round"/></svg>';
+const BELL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';
+const SEARCH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
 
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json" };
@@ -66,7 +234,7 @@ async function api(path, opts = {}) {
   const res = await fetch("/api" + path, { method: opts.method || "GET", headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    if (res.status === 401 && path !== "/auth/login") { logout(); }
+    if (res.status === 401 && path !== "/auth/login") logout();
     const err = new Error(data.message || res.statusText);
     err.status = res.status; err.code = data.code; err.data = data;
     throw err;
@@ -78,98 +246,145 @@ function showBanner(msg, opts = {}) {
   const el = $("#banner");
   if (!el) return;
   el.innerHTML = msg
-    ? `<div class="msg ${opts.info ? "info" : ""}"><span>${esc(msg)}</span><span>${opts.reloadId ? `<button data-act="reload" data-id="${opts.reloadId}">Reload item</button> ` : ""}<button data-act="dismiss">x</button></span></div>`
+    ? `<div class="msg ${opts.info ? "info" : ""}" role="alert"><span>${esc(msg)}</span><span>${opts.reloadId ? `<button class="btn" data-act="reload" data-id="${opts.reloadId}">Reload item</button> ` : ""}<button class="btn quiet" data-act="dismiss" aria-label="Dismiss">Dismiss</button></span></div>`
     : "";
+}
+function toast(msg) {
+  const el = document.createElement("div");
+  el.className = "toast"; el.textContent = msg;
+  $("#toasts").appendChild(el);
+  setTimeout(() => el.remove(), 2800);
 }
 
 // ---------------------------------------------------------------- login
 function logout() {
   sessionStorage.removeItem("token");
-  S.token = null; S.me = null; S.cur = null;
+  S.token = null; S.me = null; S.cur = null; S.items = [];
   if (S.timer) { clearInterval(S.timer); S.timer = null; }
   showLogin();
 }
 
+const DEMO = [["admin", "Admin"], ["alice", "Lead"], ["bob", "Lead"], ["carol", "Member"], ["dave", "Member"], ["erin", "Member"], ["grace", "Member"], ["heidi", "Member"], ["ivan", "Member"], ["frank", "Viewer"]];
 function showLogin(msg) {
-  root.innerHTML = `<div class="card login"><h1 style="margin-top:0">Operations Under Pressure</h1>
+  root.innerHTML = `<div class="login-wrap"><div class="login">
+    ${LOGO}
+    <h1>Operations Under Pressure</h1>
+    <p class="lead">Track, assign and resolve work across your teams.</p>
     <form id="loginForm">
-      <label>Username</label><input name="username" value="alice" autocomplete="username" required>
-      <label>Password</label><input name="password" type="password" value="demo1234" autocomplete="current-password" required>
-      <button class="primary" type="submit">Log in</button>
-      <p id="loginMsg" style="color:var(--bad)">${esc(msg || "")}</p>
+      <label class="field"><span>Username</span><input name="username" value="alice" autocomplete="username" required></label>
+      <label class="field"><span>Password</span><input name="password" type="password" value="demo1234" autocomplete="current-password" required></label>
+      <button class="btn primary block" type="submit">Log in</button>
+      <p class="err" id="loginMsg" role="alert">${esc(msg || "")}</p>
     </form>
-    <p class="mut">Demo users (password <code>demo1234</code>): admin, alice (lead), bob (lead), carol, dave, erin, grace, heidi, ivan (members), frank (viewer)</p></div>`;
+    <div class="demo">Demo accounts all use the password demo1234. Pick one to fill the username.
+      <div class="demo-chips">${DEMO.map(([u, r]) => `<button type="button" data-act="fill" data-u="${u}">${u}<small>${r}</small></button>`).join("")}</div>
+    </div></div></div>`;
 }
 
 // ---------------------------------------------------------------- shell
-function showShell() {
-  const roles = S.me.memberships.map((m) => `${esc(m.team.name)}: ${esc(m.role)}`).join(" | ");
-  const teamOpts = S.me.memberships.map((m) => `<option value="${m.team.id}">${esc(m.team.name)}</option>`).join("");
-  root.innerHTML = `
-  <header>
-    <div><b>Operations Under Pressure</b> <span class="mut">&nbsp; ${esc(S.me.username)} - ${roles}</span></div>
-    <div><button id="bell" data-act="bell">Notifications</button> <button data-act="logout">Log out</button></div>
-  </header>
-  <div id="notifs" class="dd" hidden></div>
-  <div id="banner"></div>
-  <main>
-    <section>
-      <div class="card">
-        <details><summary>+ New item</summary>
-          <form id="newForm">
-            <label>Title</label><input name="title" required maxlength="200" style="width:100%">
-            <div class="row2">
-              <select name="team_id">${teamOpts}</select>
-              <select name="type"><option>incident</option><option>customer_issue</option><option>payment</option><option>compliance</option><option selected>task</option></select>
-              <select name="priority"><option>low</option><option selected>medium</option><option>high</option><option>urgent</option></select>
-              <input type="date" name="due_date">
-            </div>
-            <label>Description</label><textarea name="description"></textarea>
-            <div class="row2"><button class="primary" type="submit" id="createBtn">Create</button></div>
-          </form>
-        </details>
-        <div class="views" id="views"></div>
-        <form class="filters" id="filters" onsubmit="return false">
-          <input name="q" placeholder="Search title or #id" style="flex:1;min-width:140px">
-          <select name="status"><option value="">any status</option><option>open</option><option>in_progress</option><option>awaiting_approval</option><option>resolved</option><option>closed</option></select>
-          <select name="priority"><option value="">any priority</option><option>urgent</option><option>high</option><option>medium</option><option>low</option></select>
-          <select name="type"><option value="">any type</option><option>incident</option><option>customer_issue</option><option>payment</option><option>compliance</option><option>task</option></select>
-          <select name="team_id"><option value="">all teams</option>${teamOpts}</select>
-          <select name="assignee"><option value="">anyone</option><option value="me">me</option><option value="none">unassigned</option></select>
-        </form>
-        <table><thead><tr><th>#</th><th>Title</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Due</th></tr></thead><tbody id="list"></tbody></table>
-        <p id="listEmpty" class="mut" hidden>No items match.</p>
-        <div class="row2"><button id="more" data-act="more" hidden>Load more</button></div>
-      </div>
-    </section>
-    <section id="detail" class="card"><p class="mut">Select an item to see details.</p></section>
-  </main>`;
+function roleSummary() {
+  const by = {};
+  S.me.memberships.forEach((m) => (by[m.role] ??= []).push(m.team.name));
+  return Object.entries(by).map(([r, t]) => `${cap(r)} in ${t.join(", ")}`).join("; ");
 }
 
+function showShell() {
+  const teams = S.me.memberships;
+  const creatable = teams.filter((m) => m.role !== "viewer");
+  const teamOpts = (list) => list.map((m) => `<option value="${m.team.id}">${esc(m.team.name)}</option>`).join("");
+  root.innerHTML = `<div id="app">
+    <header class="top">
+      <div class="brand">${LOGO}<span>Operations Under Pressure</span></div>
+      <div class="me">
+        <div class="who"><b>${esc(S.me.username)}</b><small>${esc(roleSummary())}</small></div>
+        <button class="btn quiet iconbtn" id="bell" data-act="bell" aria-label="Notifications">${BELL}<span class="count" id="bellCount" hidden></span></button>
+        <button class="btn" data-act="logout">Log out</button>
+      </div>
+    </header>
+    <div id="notifs" class="dd" hidden></div>
+    <div id="banner"></div>
+    <div class="shell">
+      <nav class="rail" aria-label="Queues">
+        ${creatable.length ? '<button class="btn primary block" data-act="newItem">New item</button>' : ""}
+        <div class="qnav" id="views"></div>
+      </nav>
+      <section class="queue">
+        <div class="qhead"><h1 id="queueTitle">All items</h1><div class="meta" id="queueMeta"></div></div>
+        <form class="filters" id="filters" onsubmit="return false">
+          <label class="search">${SEARCH}<input name="q" placeholder="Search by title or #id" aria-label="Search items"></label>
+          <select name="status" aria-label="Status">${options(STATUSES, "Any status")}</select>
+          <select name="priority" aria-label="Priority">${options(PRIORITIES, "Any priority")}</select>
+          <select name="type" aria-label="Type">${options(TYPES, "Any type")}</select>
+          <select name="team_id" aria-label="Team"><option value="">All my teams</option>${teamOpts(teams)}</select>
+          <select name="assignee" aria-label="Assignee"><option value="">Anyone</option><option value="me">Me</option><option value="none">Unassigned</option></select>
+          <button type="button" class="btn quiet" id="clearBtn" data-act="clear" hidden>Clear filters</button>
+        </form>
+        <ul id="list" aria-label="Work items"><li class="empty">Loading items...</li></ul>
+        <div class="more" id="moreWrap" hidden><button class="btn" id="more" data-act="more">Load more</button></div>
+      </section>
+      <section id="detail" class="detail" aria-live="polite"></section>
+    </div>
+  </div>
+  <div class="overlay" id="newOverlay" data-act="closeNew" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="New item">
+      <h2>New item</h2>
+      <form id="newForm">
+        <label class="field"><span>Title</span><input name="title" required maxlength="200"></label>
+        <div class="row2">
+          <label class="field"><span>Team</span><select name="team_id">${teamOpts(creatable)}</select></label>
+          <label class="field"><span>Type</span><select name="type">${options(TYPES).replace('value="task"', 'value="task" selected')}</select></label>
+          <label class="field"><span>Priority</span><select name="priority">${options(["low", "medium", "high", "urgent"]).replace('value="medium"', 'value="medium" selected')}</select></label>
+        </div>
+        <label class="field"><span>Due date (optional)</span><input type="date" name="due_date"></label>
+        <label class="field"><span>Description</span><textarea name="description"></textarea></label>
+        <div class="foot"><button type="button" class="btn" data-act="closeNew">Cancel</button><button class="btn primary" type="submit" id="createBtn">Create item</button></div>
+      </form>
+    </div>
+  </div>`;
+  renderDetail();
+}
+
+const VIEWS = [["", "All items", null], ["assigned_to_me", "Assigned to me", "assigned_to_me"], ["unassigned_urgent", "Unassigned urgent", "unassigned_urgent"], ["awaiting_my_approval", "Awaiting my approval", "awaiting_my_approval"]];
 function renderViews() {
-  const defs = [["", "All items", null], ["assigned_to_me", "Assigned to me", "assigned_to_me"], ["unassigned_urgent", "Unassigned urgent", "unassigned_urgent"], ["awaiting_my_approval", "Awaiting my approval", "awaiting_my_approval"]];
-  $("#views").innerHTML = defs.map(([v, name, k]) =>
-    `<button data-act="view" data-view="${v}" class="${S.view === v ? "on" : ""}">${name}${k ? `<span class="n">${S.counts[k] ?? 0}</span>` : ""}</button>`).join("");
+  const nav = $("#views");
+  if (!nav) return;
+  nav.innerHTML = VIEWS.map(([v, name, k]) => {
+    const n = k ? S.counts[k] ?? 0 : null;
+    return `<button data-act="view" data-view="${v}" class="${S.view === v ? "on" : ""}" ${S.view === v ? 'aria-current="true"' : ""}><span>${name}</span>${k ? `<span class="n ${k === "unassigned_urgent" && n > 0 ? "alert" : ""}">${n}</span>` : ""}</button>`;
+  }).join("");
+  $("#queueTitle").textContent = VIEWS.find(([v]) => v === S.view)[1];
+}
+
+function hasFilters() {
+  const f = $("#filters");
+  return !!f && [...new FormData(f).values()].some(Boolean);
 }
 
 function renderList() {
-  $("#list").innerHTML = S.items.map((i) => `<tr class="row ${S.cur && S.cur.id === i.id ? "sel" : ""}" data-act="open" data-id="${i.id}">
-    <td>${i.id}</td><td>${esc(i.title)}<div class="mut">${esc(i.team.name)} - ${esc(label(i.type))}</div></td>
-    <td>${badge("p-" + i.priority, i.priority)}</td><td>${badge("s-" + i.status, i.status)}</td>
-    <td>${i.assignee ? esc(i.assignee.username) : '<span class="mut">-</span>'}</td><td>${fmtDate(i.due_date)}</td></tr>`).join("");
-  $("#listEmpty").hidden = S.items.length > 0;
-  $("#more").hidden = !S.next;
+  const list = $("#list");
+  if (!list) return;
+  const filtered = hasFilters();
+  $("#clearBtn").hidden = !filtered;
+  $("#queueMeta").textContent = S.items.length ? `${S.items.length} shown${S.next ? ", more available" : ""}` : "";
+  if (!S.items.length) {
+    list.innerHTML = `<li class="empty">${filtered ? "No items match these filters." : "Nothing in this queue right now."}${filtered ? '<br><button class="btn" data-act="clear">Clear filters</button>' : ""}</li>`;
+  } else {
+    list.innerHTML = S.items.map((i) => `<li class="row p-${i.priority} ${S.cur && S.cur.id === i.id ? "sel" : ""}" data-act="open" data-id="${i.id}" tabindex="0" role="button" aria-label="Open item ${i.id}: ${esc(i.title)}">
+      <div class="r-title">${esc(i.title)}</div>
+      <div class="r-sub"><span class="id">#${i.id}</span><span>${esc(i.team.name)}</span><span>${esc(cap(i.type))}</span>${i.priority === "urgent" || i.priority === "high" ? `<span class="tag ${i.priority}">${cap(i.priority)}</span>` : ""}</div>
+      <div class="r-side">${chip(i.status)}<div class="r-meta">${dueInfo(i)}${avatar(i.assignee && i.assignee.username)}</div></div>
+    </li>`).join("");
+  }
+  $("#moreWrap").hidden = !S.next;
 }
 
 // ---------------------------------------------------------------- data loading
 function filterQuery() {
-  const f = new FormData($("#filters"));
   const p = new URLSearchParams();
   if (S.view) p.set("view", S.view);
-  for (const [k, v] of f.entries()) if (v) p.set(k, v);
+  for (const [k, v] of new FormData($("#filters")).entries()) if (v) p.set(k, v);
   return p;
 }
-
 async function loadList(reset) {
   const p = filterQuery();
   p.set("limit", "25");
@@ -184,8 +399,8 @@ async function loadNotifs() {
   S.notifs = await api("/notifications");
   const seen = Number(sessionStorage.getItem("seenNotif") || 0);
   const unseen = S.notifs.filter((n) => n.id > seen).length;
-  const bell = $("#bell");
-  if (bell) bell.textContent = unseen ? `Notifications (${unseen})` : "Notifications";
+  const c = $("#bellCount");
+  if (c) { c.hidden = !unseen; c.textContent = unseen; }
 }
 async function loadEvents(reset) {
   if (!S.cur) return;
@@ -195,7 +410,6 @@ async function loadEvents(reset) {
   S.eventsNext = page.next_cursor;
   if (S.cur) renderDetail();
 }
-
 async function openItem(id) {
   showBanner("");
   try {
@@ -203,66 +417,96 @@ async function openItem(id) {
     S.members = S.cur.permissions.assign ? await api(`/teams/${S.cur.team.id}/members`) : [];
     S.events = []; S.eventsNext = null;
     renderDetail(); renderList();
+    const box = $("#detail");
+    if (window.innerWidth < 860 && box.scrollIntoView) box.scrollIntoView({ behavior: "smooth" });
     await loadEvents(true);
   } catch (e) { showBanner(e.message); }
 }
 
 // ---------------------------------------------------------------- detail
-function fmtEvent(e) {
+const FORWARD = new Set(["open>in_progress", "in_progress>awaiting_approval", "awaiting_approval>resolved", "resolved>closed"]);
+const VERB = {
+  "open>in_progress": "Start work", "in_progress>open": "Return to queue", "in_progress>awaiting_approval": "Send for approval",
+  "awaiting_approval>resolved": "Approve", "awaiting_approval>in_progress": "Send back", "resolved>closed": "Close item", "resolved>in_progress": "Reopen",
+};
+
+function renderEvent(e) {
   const d = e.data || {};
+  const who = esc(e.actor ? e.actor.username : "System");
+  let text;
   switch (e.kind) {
-    case "created": return "created the item";
-    case "status_changed": return `moved ${esc(label(d.from))} &rarr; ${esc(label(d.to))}`;
-    case "assigned": return d.to ? `assigned to <b>${esc(d.to.username)}</b>${d.from ? ` (was ${esc(d.from.username)})` : ""}` : "unassigned the item";
-    case "priority_changed": return `changed priority ${esc(d.from)} &rarr; ${esc(d.to)}`;
-    case "edited": return `edited ${esc((d.fields || []).join(", "))}`;
-    case "comment": return `commented: &ldquo;${esc(d.text)}&rdquo;`;
-    default: return esc(e.kind);
+    case "created": text = "created this item"; break;
+    case "status_changed": text = `moved it from ${esc(cap(d.from))} to ${esc(cap(d.to))}`; break;
+    case "assigned": text = d.to ? (d.from ? `reassigned it from ${esc(d.from.username)} to <b>${esc(d.to.username)}</b>` : `assigned it to <b>${esc(d.to.username)}</b>`) : "unassigned it"; break;
+    case "priority_changed": text = `changed priority from ${esc(d.from)} to ${esc(d.to)}`; break;
+    case "edited": text = `edited ${esc((d.fields || []).join(", ").replace(/_/g, " "))}`; break;
+    case "comment": text = "commented"; break;
+    default: text = esc(e.kind);
   }
+  return `<li class="ev ev-${esc(e.kind)}"><div class="ev-head"><span><b>${who}</b> ${text}</span><time title="${esc(new Date(e.created_at).toLocaleString())}">${esc(ago(e.created_at))}</time></div>${e.kind === "comment" ? `<div class="note">${esc(d.text)}</div>` : ""}</li>`;
 }
 
 function renderDetail() {
-  const i = S.cur;
   const box = $("#detail");
-  if (!i) { box.innerHTML = '<p class="mut">Select an item to see details.</p>'; return; }
+  if (!box) return;
+  const i = S.cur;
+  if (!i) { box.innerHTML = '<div class="d-empty"><b>No item selected</b><p style="margin-top:6px">Choose an item from the queue to see its workflow stage, actions and full history.</p></div>'; return; }
   const p = i.permissions;
+  const idx = STATUSES.indexOf(i.status);
+  const track = `<ol class="track" aria-label="Workflow progress">${STATUSES.map((s, k) =>
+    `<li class="${k < idx ? "done" : k === idx ? "now" : ""}" ${k === idx ? 'aria-current="step"' : ""}><span class="node"></span>${esc(cap(s))}</li>`).join("")}</ol>`;
+  const buttons = (p.claim ? '<button class="btn primary" data-act="claim">Claim this item</button>' : "") +
+    p.transitions.map((t) => {
+      const key = `${i.status}>${t}`;
+      return `<button class="btn ${FORWARD.has(key) ? "primary" : ""}" data-act="transition" data-to="${t}">${esc(VERB[key] || cap(t))}</button>`;
+    }).join("");
+  const hint = buttons ? "" : `<p class="hint">${i.role === "viewer" ? "You have read-only access to this team." : "You have no actions on this item right now. Only the assignee or a Lead can move it."}</p>`;
   const memberOpts = S.members.filter((m) => m.role !== "viewer")
     .map((m) => `<option value="${m.id}" ${i.assignee && i.assignee.id === m.id ? "selected" : ""}>${esc(m.username)} (${esc(m.role)})</option>`).join("");
-  box.innerHTML = `
-    <h2>#${i.id} ${esc(i.title)}</h2>
-    <div>${badge("p-" + i.priority, i.priority)} ${badge("s-" + i.status, i.status)} ${badge("", i.type)}</div>
-    <p class="mut">Team ${esc(i.team.name)} | you are <b>${esc(i.role)}</b> here | assignee: ${i.assignee ? esc(i.assignee.username) : "none"} | created by ${esc(i.created_by.username)} | due ${fmtDate(i.due_date)} | version ${i.version}</p>
-    <p style="white-space:pre-wrap">${esc(i.description) || '<span class="mut">No description.</span>'}</p>
-    <div class="row2">
-      ${p.claim ? `<button class="primary" data-act="claim">Claim</button>` : ""}
-      ${p.transitions.map((t) => `<button data-act="transition" data-to="${t}">&rarr; ${esc(label(t))}</button>`).join("")}
-    </div>
-    ${p.assign ? `<div class="row2"><select id="assignSel"><option value="">(unassigned)</option>${memberOpts}</select><button data-act="assign">Assign</button></div>` : ""}
-    ${p.edit ? `<details><summary>Edit</summary><form id="editForm">
-      <label>Title</label><input name="title" value="${esc(i.title)}" style="width:100%" maxlength="200">
+  box.innerHTML = `<div class="d-pad">
+    <h2 class="d-title"><span class="d-id">#${i.id}</span>${esc(i.title)}</h2>
+    <div class="pri p-${esc(i.priority)}"><i></i>${esc(cap(i.priority))} priority</div>
+    ${track}
+    <div class="actions">${buttons}</div>${hint}
+    ${p.assign ? `<div class="assign"><select id="assignSel" aria-label="Assignee"><option value="">Unassigned</option>${memberOpts}</select><button class="btn" data-act="assign">Assign</button></div>` : ""}
+    <dl class="facts">
+      <dt>Status</dt><dd data-field="status">${chip(i.status)}</dd>
+      <dt>Assignee</dt><dd data-field="assignee">${i.assignee ? `${avatar(i.assignee.username, "lg")}<span>${esc(i.assignee.username)}</span>` : '<span style="color:var(--ink3)">Nobody yet</span>'}</dd>
+      <dt>Team</dt><dd>${esc(i.team.name)}</dd>
+      <dt>Type</dt><dd>${esc(cap(i.type))}</dd>
+      <dt>Due</dt><dd>${i.due_date ? `${esc(fmtDay(i.due_date))} ${dueInfo(i).includes("over") ? dueInfo(i) : ""}` : '<span style="color:var(--ink3)">No due date</span>'}</dd>
+      <dt>Created by</dt><dd>${avatar(i.created_by.username)}<span>${esc(i.created_by.username)}</span></dd>
+      <dt>Your role</dt><dd>${esc(cap(i.role))}</dd>
+      <dt>Version</dt><dd>${i.version}</dd>
+    </dl>
+    <p class="desc ${i.description ? "" : "none"}">${i.description ? esc(i.description) : "No description."}</p>
+    ${p.edit ? `<details class="edit"><summary>Edit details</summary><form id="editForm">
+      <label class="field"><span>Title</span><input name="title" value="${esc(i.title)}" maxlength="200" required></label>
       <div class="row2">
-        <select name="priority">${["low", "medium", "high", "urgent"].map((x) => `<option ${x === i.priority ? "selected" : ""}>${x}</option>`).join("")}</select>
-        <select name="type">${["incident", "customer_issue", "payment", "compliance", "task"].map((x) => `<option ${x === i.type ? "selected" : ""}>${x}</option>`).join("")}</select>
-        <input type="date" name="due_date" value="${esc(i.due_date || "")}">
+        <label class="field"><span>Priority</span><select name="priority">${["low", "medium", "high", "urgent"].map((x) => `<option value="${x}" ${x === i.priority ? "selected" : ""}>${cap(x)}</option>`).join("")}</select></label>
+        <label class="field"><span>Type</span><select name="type">${TYPES.map((x) => `<option value="${x}" ${x === i.type ? "selected" : ""}>${esc(cap(x))}</option>`).join("")}</select></label>
+        <label class="field"><span>Due date</span><input type="date" name="due_date" value="${esc(i.due_date || "")}"></label>
       </div>
-      <label>Description</label><textarea name="description">${esc(i.description)}</textarea>
-      <div class="row2"><button class="primary" type="submit">Save changes</button></div></form></details>` : ""}
-    <h3 style="margin-bottom:4px">Activity</h3>
-    ${p.comment ? `<form id="commentForm" class="row2"><input name="text" placeholder="Add a comment" style="flex:1" maxlength="2000" required><button type="submit">Comment</button></form>` : ""}
-    <ul class="timeline">${S.events.map((e) => `<li><span class="mut">${esc(new Date(e.created_at).toLocaleString())}</span> <b>${esc(e.actor ? e.actor.username : "system")}</b> ${fmtEvent(e)}</li>`).join("")}</ul>
-    ${S.eventsNext ? `<button data-act="moreEvents">Older activity</button>` : ""}`;
+      <label class="field"><span>Description</span><textarea name="description">${esc(i.description)}</textarea></label>
+      <button class="btn primary" type="submit">Save changes</button></form></details>` : ""}
+    <div class="d-act"><h3>Activity</h3>
+      ${p.comment ? '<form id="commentForm" class="comment-form"><input name="text" placeholder="Write a comment" maxlength="2000" required aria-label="Comment"><button class="btn" type="submit">Add comment</button></form>' : ""}
+      <ul class="timeline">${S.events.map(renderEvent).join("")}</ul>
+      ${S.eventsNext ? '<p style="margin-top:8px"><button class="btn" data-act="moreEvents">Show older activity</button></p>' : ""}
+    </div>
+  </div>`;
 }
 
 // ---------------------------------------------------------------- actions (optimistic UI with rollback)
 function fail(e, itemId) {
   if (e.code === "version_conflict" || e.code === "already_claimed") {
-    showBanner("This item changed while you were working: " + e.message + " Reload to see the latest version.", { reloadId: itemId });
+    showBanner("This item changed while you were working: " + e.message + " Reload it to see the latest version.", { reloadId: itemId });
   } else {
-    showBanner(e.message || "Something went wrong");
+    showBanner(e.message || "Something went wrong.");
   }
 }
 
-async function act(optimistic, request) {
+async function act(optimistic, request, okMsg) {
   if (S.busy || !S.cur) return;
   S.busy = true;
   showBanner("");
@@ -272,55 +516,75 @@ async function act(optimistic, request) {
   const key = uuid(); // one key per click: a double click or network retry cannot apply the action twice
   try {
     optimistic(S.cur);
-    renderDetail(); // UI updates immediately...
+    renderDetail(); // the screen updates immediately...
     const fresh = await request(key);
-    S.cur = fresh; // ...and is replaced by the server's truth
+    S.cur = fresh; // ...and is replaced by the server's answer
     S.items = S.items.map((x) => (x.id === fresh.id ? fresh : x));
     renderDetail(); renderList();
+    if (okMsg) toast(okMsg);
     refreshAfterAction = true;
   } catch (e) {
-    S.cur = snapshot; // ...or rolled back with the server's reason
+    S.cur = snapshot; // ...or rolled back, with the server's reason
     renderDetail();
     fail(e, id);
   } finally {
-    S.busy = false; // release the lock as soon as the main request is done
+    S.busy = false;
   }
   if (refreshAfterAction) Promise.all([loadEvents(true), loadCounts()]).catch(() => {});
 }
-
 const post = (path, body) => (key) => api(`/items/${S.cur.id}${path}`, { method: "POST", body, key });
 
 // ---------------------------------------------------------------- events
+function closeOverlays() {
+  const o = $("#newOverlay"); if (o) o.hidden = true;
+  const d = $("#notifs"); if (d) d.hidden = true;
+}
+
 document.addEventListener("click", async (ev) => {
   const el = ev.target.closest("[data-act]");
   if (!el) { const dd = $("#notifs"); if (dd && !ev.target.closest("#notifs")) dd.hidden = true; return; }
-  const act_ = el.dataset.act;
+  const what = el.dataset.act;
+  if (what === "closeNew" && el.classList.contains("overlay") && ev.target !== el) return; // click inside the dialog
   try {
-    if (act_ === "logout") logout();
-    else if (act_ === "dismiss") showBanner("");
-    else if (act_ === "reload") await openItem(Number(el.dataset.id));
-    else if (act_ === "open") await openItem(Number(el.dataset.id));
-    else if (act_ === "more") await loadList(false);
-    else if (act_ === "moreEvents") await loadEvents(false);
-    else if (act_ === "view") { S.view = el.dataset.view; renderViews(); await loadList(true); }
-    else if (act_ === "bell") {
+    if (what === "logout") logout();
+    else if (what === "fill") { $("#loginForm [name=username]").value = el.dataset.u; $("#loginForm [name=password]").value = "demo1234"; }
+    else if (what === "dismiss") showBanner("");
+    else if (what === "reload" || what === "open") await openItem(Number(el.dataset.id));
+    else if (what === "more") await loadList(false);
+    else if (what === "moreEvents") await loadEvents(false);
+    else if (what === "clear") { $("#filters").reset(); await loadList(true); }
+    else if (what === "newItem") { $("#newOverlay").hidden = false; $("#newForm [name=title]").focus(); }
+    else if (what === "closeNew") $("#newOverlay").hidden = true;
+    else if (what === "view") { S.view = el.dataset.view; renderViews(); await loadList(true); }
+    else if (what === "bell") {
       const dd = $("#notifs");
       dd.hidden = !dd.hidden;
-      dd.innerHTML = S.notifs.length ? S.notifs.map((n) => `<div data-act="open" data-id="${n.item_id}">${esc(n.message)}<br><span class="mut">${esc(new Date(n.created_at).toLocaleString())}</span></div>`).join("") : '<div class="mut">No notifications</div>';
+      dd.innerHTML = S.notifs.length
+        ? S.notifs.map((n) => `<div data-act="open" data-id="${n.item_id}">${esc(n.message)}<br><small>${esc(ago(n.created_at))}</small></div>`).join("")
+        : '<div style="cursor:default;color:var(--ink2)">No notifications yet. You will see a message here when a Lead assigns you an item.</div>';
       if (S.notifs.length) sessionStorage.setItem("seenNotif", String(S.notifs[0].id));
-      ev.stopPropagation(); loadNotifs();
-    }
-    else if (act_ === "claim") {
-      await act((i) => { i.assignee = { id: S.me.id, username: S.me.username }; i.permissions.claim = false; }, post("/claim"));
-    } else if (act_ === "transition") {
+      ev.stopPropagation();
+      loadNotifs();
+    } else if (what === "claim") {
+      await act((i) => { i.assignee = { id: S.me.id, username: S.me.username }; i.permissions.claim = false; }, post("/claim"), "Item claimed");
+    } else if (what === "transition") {
       const to = el.dataset.to;
-      await act((i) => { i.status = to; i.permissions.transitions = []; }, post("/transition", { to, version: S.cur.version }));
-    } else if (act_ === "assign") {
+      const label = VERB[`${S.cur.status}>${to}`] || cap(to);
+      await act((i) => { i.status = to; i.permissions.transitions = []; }, post("/transition", { to, version: S.cur.version }), label + ": done");
+    } else if (what === "assign") {
       const v = $("#assignSel").value;
       const m = S.members.find((x) => String(x.id) === v);
-      await act((i) => { i.assignee = m ? { id: m.id, username: m.username } : null; }, post("/assign", { assignee_id: v ? Number(v) : null, version: S.cur.version }));
+      await act((i) => { i.assignee = m ? { id: m.id, username: m.username } : null; }, post("/assign", { assignee_id: v ? Number(v) : null, version: S.cur.version }), m ? `Assigned to ${m.username}` : "Item unassigned");
     }
   } catch (e) { showBanner(e.message); }
+});
+
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape") closeOverlays();
+  if ((ev.key === "Enter" || ev.key === " ") && ev.target.matches && ev.target.matches(".row")) {
+    ev.preventDefault();
+    openItem(Number(ev.target.dataset.id));
+  }
 });
 
 document.addEventListener("submit", async (ev) => {
@@ -340,30 +604,32 @@ document.addEventListener("submit", async (ev) => {
     const btn = $("#createBtn"); btn.disabled = true;
     try {
       const item = await api("/items", { method: "POST", body, key: S.createKey });
-      S.createKey = null; form.reset();
+      S.createKey = null; form.reset(); $("#newOverlay").hidden = true;
+      toast("Item created");
       await Promise.all([loadList(true), loadCounts()]);
       await openItem(item.id);
-    } catch (e) { showBanner(e.message); } finally { btn.disabled = false; }
+    } catch (e) { showBanner(e.message); $("#newOverlay").hidden = true; } finally { btn.disabled = false; }
   } else if (form.id === "editForm") {
     const f = new FormData(form);
     const body = { version: S.cur.version, title: f.get("title"), description: f.get("description"), type: f.get("type"), priority: f.get("priority"), due_date: f.get("due_date") || null };
     await act((i) => Object.assign(i, { title: body.title, description: body.description, type: body.type, priority: body.priority, due_date: body.due_date }),
-      (key) => api(`/items/${S.cur.id}`, { method: "PATCH", body, key }));
+      (key) => api(`/items/${S.cur.id}`, { method: "PATCH", body, key }), "Changes saved");
   } else if (form.id === "commentForm") {
     const text = new FormData(form).get("text");
     try {
       await api(`/items/${S.cur.id}/comments`, { method: "POST", body: { text }, key: uuid() });
       await loadEvents(true);
+      toast("Comment added");
     } catch (e) { fail(e, S.cur && S.cur.id); }
   }
 });
 
 let qTimer = null;
 document.addEventListener("input", (ev) => {
-  if (ev.target.closest("#filters") && ev.target.name === "q") { clearTimeout(qTimer); qTimer = setTimeout(() => loadList(true), 300); }
+  if (ev.target.closest("#filters") && ev.target.name === "q") { clearTimeout(qTimer); qTimer = setTimeout(() => loadList(true).catch((e) => showBanner(e.message)), 300); }
 });
 document.addEventListener("change", (ev) => {
-  if (ev.target.closest("#filters") && ev.target.name !== "q") loadList(true);
+  if (ev.target.closest("#filters") && ev.target.name !== "q") loadList(true).catch((e) => showBanner(e.message));
 });
 
 // ---------------------------------------------------------------- start
@@ -371,7 +637,7 @@ async function start() {
   if (!S.token) return showLogin();
   try { S.me = await api("/me"); } catch { return; }
   showShell(); renderViews();
-  await Promise.all([loadCounts(), loadList(true), loadNotifs()]);
+  try { await Promise.all([loadCounts(), loadList(true), loadNotifs()]); } catch (e) { showBanner(e.message); }
   if (S.timer) clearInterval(S.timer);
   S.timer = setInterval(() => { loadCounts().catch(() => {}); loadNotifs().catch(() => {}); }, 15000); // polling is enough here
 }
