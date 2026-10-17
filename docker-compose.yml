@@ -1,0 +1,46 @@
+x-app-env: &app-env
+  PORT: "3000"
+  POSTGRES_DB: ops
+  POSTGRES_USER: ops
+  POSTGRES_PASSWORD: ops
+  POSTGRES_HOST: db
+  POSTGRES_PORT: "5432"
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ops
+      POSTGRES_USER: ops
+      POSTGRES_PASSWORD: ops
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ops -d ops"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  web:
+    build: .
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "node dist/migrate.js && node dist/seed.js --if-empty && node dist/server.js"
+
+  worker:
+    build: .
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
+    command: node dist/worker.js
+
+volumes:
+  pgdata:

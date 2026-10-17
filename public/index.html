@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Operations Under Pressure</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2128;--mut:#667085;--line:#e3e6eb;--pri:#2457d6;--bad:#b42318;--ok:#067647;--warn:#b54708}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+header{background:#1f2937;color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+header b{font-size:15px}.mut{color:var(--mut)}header .mut{color:#cbd5e1}
+button,input,select,textarea{font:inherit}
+button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 10px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--pri)}button:disabled{opacity:.5;cursor:default}
+button.primary{background:var(--pri);border-color:var(--pri);color:#fff}
+header button{background:transparent;color:#fff;border-color:#475467}
+input,select,textarea{border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:#fff;max-width:100%}
+textarea{width:100%;min-height:70px}
+main{display:grid;grid-template-columns:minmax(380px,1.1fr) 1fr;gap:14px;padding:14px;align-items:start}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}
+.views{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.views button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.views .n{background:#e8edf9;color:var(--pri);border-radius:10px;padding:0 6px;margin-left:4px;font-size:12px}
+.views button.on .n{background:#fff}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;color:var(--mut);font-weight:500;font-size:12px;padding:4px 6px}
+td{padding:6px;border-top:1px solid var(--line);vertical-align:top}
+tr.row{cursor:pointer}tr.row:hover{background:#f8fafc}tr.sel{background:#eef3ff}
+.badge{display:inline-block;border-radius:10px;padding:0 8px;font-size:12px;background:#eef0f3}
+.p-urgent{background:#fee4e2;color:var(--bad)}.p-high{background:#fef0c7;color:var(--warn)}
+.s-open{background:#e0eaff}.s-in_progress{background:#fef0c7}.s-awaiting_approval{background:#f4e3ff}.s-resolved{background:#d1fadf}.s-closed{background:#e5e7eb}
+#banner .msg{margin:10px 14px 0;padding:8px 12px;border-radius:6px;background:#fee4e2;color:var(--bad);display:flex;gap:10px;align-items:center;justify-content:space-between}
+#banner .msg.info{background:#e0eaff;color:#1d3a8a}
+.login{max-width:380px;margin:60px auto}.login input{width:100%;margin:4px 0 10px}
+.row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.timeline{list-style:none;margin:8px 0 0;padding:0}.timeline li{border-top:1px solid var(--line);padding:6px 0}
+.dd{position:absolute;right:16px;top:44px;background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:8px;width:320px;max-height:320px;overflow:auto;z-index:5}
+.dd div{padding:8px 10px;border-top:1px solid var(--line);cursor:pointer}.dd div:first-child{border-top:0}
+h2{margin:4px 0 6px}details summary{cursor:pointer;margin-bottom:8px;font-weight:500}
+label{display:block;margin:6px 0 2px;color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+"use strict";
+const S = {
+  token: sessionStorage.getItem("token"), me: null, view: "", items: [], next: null, counts: {},
+  cur: null, events: [], eventsNext: null, members: [], notifs: [], createKey: null, busy: false, timer: null,
+};
+const root = document.getElementById("root");
+const $ = (sel) => document.querySelector(sel);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const label = (s) => String(s).replace(/_/g, " ");
+const uuid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : "k-" + Date.now() + "-" + Math.random().toString(16).slice(2));
+const badge = (cls, text) => `<span class="badge ${cls}">${esc(label(text))}</span>`;
+const fmtDate = (d) => (d ? esc(String(d).slice(0, 10)) : "-");
+
+async function api(path, opts = {}) {
+  const headers = { "Content-Type": "application/json" };
+  if (S.token) headers.Authorization = "Bearer " + S.token;
+  if (opts.key) headers["Idempotency-Key"] = opts.key;
+  const res = await fetch("/api" + path, { method: opts.method || "GET", headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401 && path !== "/auth/login") { logout(); }
+    const err = new Error(data.message || res.statusText);
+    err.status = res.status; err.code = data.code; err.data = data;
+    throw err;
+  }
+  return data;
+}
+
+function showBanner(msg, opts = {}) {
+  const el = $("#banner");
+  if (!el) return;
+  el.innerHTML = msg
+    ? `<div class="msg ${opts.info ? "info" : ""}"><span>${esc(msg)}</span><span>${opts.reloadId ? `<button data-act="reload" data-id="${opts.reloadId}">Reload item</button> ` : ""}<button data-act="dismiss">x</button></span></div>`
+    : "";
+}
+
+// ---------------------------------------------------------------- login
+function logout() {
+  sessionStorage.removeItem("token");
+  S.token = null; S.me = null; S.cur = null;
+  if (S.timer) { clearInterval(S.timer); S.timer = null; }
+  showLogin();
+}
+
+function showLogin(msg) {
+  root.innerHTML = `<div class="card login"><h1 style="margin-top:0">Operations Under Pressure</h1>
+    <form id="loginForm">
+      <label>Username</label><input name="username" value="alice" autocomplete="username" required>
+      <label>Password</label><input name="password" type="password" value="demo1234" autocomplete="current-password" required>
+      <button class="primary" type="submit">Log in</button>
+      <p id="loginMsg" style="color:var(--bad)">${esc(msg || "")}</p>
+    </form>
+    <p class="mut">Demo users (password <code>demo1234</code>): admin, alice (lead), bob (lead), carol, dave, erin, grace, heidi, ivan (members), frank (viewer)</p></div>`;
+}
+
+// ---------------------------------------------------------------- shell
+function showShell() {
+  const roles = S.me.memberships.map((m) => `${esc(m.team.name)}: ${esc(m.role)}`).join(" | ");
+  const teamOpts = S.me.memberships.map((m) => `<option value="${m.team.id}">${esc(m.team.name)}</option>`).join("");
+  root.innerHTML = `
+  <header>
+    <div><b>Operations Under Pressure</b> <span class="mut">&nbsp; ${esc(S.me.username)} - ${roles}</span></div>
+    <div><button id="bell" data-act="bell">Notifications</button> <button data-act="logout">Log out</button></div>
+  </header>
+  <div id="notifs" class="dd" hidden></div>
+  <div id="banner"></div>
+  <main>
+    <section>
+      <div class="card">
+        <details><summary>+ New item</summary>
+          <form id="newForm">
+            <label>Title</label><input name="title" required maxlength="200" style="width:100%">
+            <div class="row2">
+              <select name="team_id">${teamOpts}</select>
+              <select name="type"><option>incident</option><option>customer_issue</option><option>payment</option><option>compliance</option><option selected>task</option></select>
+              <select name="priority"><option>low</option><option selected>medium</option><option>high</option><option>urgent</option></select>
+              <input type="date" name="due_date">
+            </div>
+            <label>Description</label><textarea name="description"></textarea>
+            <div class="row2"><button class="primary" type="submit" id="createBtn">Create</button></div>
+          </form>
+        </details>
+        <div class="views" id="views"></div>
+        <form class="filters" id="filters" onsubmit="return false">
+          <input name="q" placeholder="Search title or #id" style="flex:1;min-width:140px">
+          <select name="status"><option value="">any status</option><option>open</option><option>in_progress</option><option>awaiting_approval</option><option>resolved</option><option>closed</option></select>
+          <select name="priority"><option value="">any priority</option><option>urgent</option><option>high</option><option>medium</option><option>low</option></select>
+          <select name="type"><option value="">any type</option><option>incident</option><option>customer_issue</option><option>payment</option><option>compliance</option><option>task</option></select>
+          <select name="team_id"><option value="">all teams</option>${teamOpts}</select>
+          <select name="assignee"><option value="">anyone</option><option value="me">me</option><option value="none">unassigned</option></select>
+        </form>
+        <table><thead><tr><th>#</th><th>Title</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Due</th></tr></thead><tbody id="list"></tbody></table>
+        <p id="listEmpty" class="mut" hidden>No items match.</p>
+        <div class="row2"><button id="more" data-act="more" hidden>Load more</button></div>
+      </div>
+    </section>
+    <section id="detail" class="card"><p class="mut">Select an item to see details.</p></section>
+  </main>`;
+}
+
+function renderViews() {
+  const defs = [["", "All items", null], ["assigned_to_me", "Assigned to me", "assigned_to_me"], ["unassigned_urgent", "Unassigned urgent", "unassigned_urgent"], ["awaiting_my_approval", "Awaiting my approval", "awaiting_my_approval"]];
+  $("#views").innerHTML = defs.map(([v, name, k]) =>
+    `<button data-act="view" data-view="${v}" class="${S.view === v ? "on" : ""}">${name}${k ? `<span class="n">${S.counts[k] ?? 0}</span>` : ""}</button>`).join("");
+}
+
+function renderList() {
+  $("#list").innerHTML = S.items.map((i) => `<tr class="row ${S.cur && S.cur.id === i.id ? "sel" : ""}" data-act="open" data-id="${i.id}">
+    <td>${i.id}</td><td>${esc(i.title)}<div class="mut">${esc(i.team.name)} - ${esc(label(i.type))}</div></td>
+    <td>${badge("p-" + i.priority, i.priority)}</td><td>${badge("s-" + i.status, i.status)}</td>
+    <td>${i.assignee ? esc(i.assignee.username) : '<span class="mut">-</span>'}</td><td>${fmtDate(i.due_date)}</td></tr>`).join("");
+  $("#listEmpty").hidden = S.items.length > 0;
+  $("#more").hidden = !S.next;
+}
+
+// ---------------------------------------------------------------- data loading
+function filterQuery() {
+  const f = new FormData($("#filters"));
+  const p = new URLSearchParams();
+  if (S.view) p.set("view", S.view);
+  for (const [k, v] of f.entries()) if (v) p.set(k, v);
+  return p;
+}
+
+async function loadList(reset) {
+  const p = filterQuery();
+  p.set("limit", "25");
+  if (!reset && S.next) p.set("cursor", S.next);
+  const page = await api("/items?" + p.toString());
+  S.items = reset ? page.items : S.items.concat(page.items);
+  S.next = page.next_cursor;
+  renderList();
+}
+async function loadCounts() { S.counts = await api("/dashboard"); renderViews(); }
+async function loadNotifs() {
+  S.notifs = await api("/notifications");
+  const seen = Number(sessionStorage.getItem("seenNotif") || 0);
+  const unseen = S.notifs.filter((n) => n.id > seen).length;
+  const bell = $("#bell");
+  if (bell) bell.textContent = unseen ? `Notifications (${unseen})` : "Notifications";
+}
+async function loadEvents(reset) {
+  if (!S.cur) return;
+  const q = reset || !S.eventsNext ? "" : "?cursor=" + S.eventsNext;
+  const page = await api(`/items/${S.cur.id}/activity${q}`);
+  S.events = reset ? page.events : S.events.concat(page.events);
+  S.eventsNext = page.next_cursor;
+  if (S.cur) renderDetail();
+}
+
+async function openItem(id) {
+  showBanner("");
+  try {
+    S.cur = await api("/items/" + id);
+    S.members = S.cur.permissions.assign ? await api(`/teams/${S.cur.team.id}/members`) : [];
+    S.events = []; S.eventsNext = null;
+    renderDetail(); renderList();
+    await loadEvents(true);
+  } catch (e) { showBanner(e.message); }
+}
+
+// ---------------------------------------------------------------- detail
+function fmtEvent(e) {
+  const d = e.data || {};
+  switch (e.kind) {
+    case "created": return "created the item";
+    case "status_changed": return `moved ${esc(label(d.from))} &rarr; ${esc(label(d.to))}`;
+    case "assigned": return d.to ? `assigned to <b>${esc(d.to.username)}</b>${d.from ? ` (was ${esc(d.from.username)})` : ""}` : "unassigned the item";
+    case "priority_changed": return `changed priority ${esc(d.from)} &rarr; ${esc(d.to)}`;
+    case "edited": return `edited ${esc((d.fields || []).join(", "))}`;
+    case "comment": return `commented: &ldquo;${esc(d.text)}&rdquo;`;
+    default: return esc(e.kind);
+  }
+}
+
+function renderDetail() {
+  const i = S.cur;
+  const box = $("#detail");
+  if (!i) { box.innerHTML = '<p class="mut">Select an item to see details.</p>'; return; }
+  const p = i.permissions;
+  const memberOpts = S.members.filter((m) => m.role !== "viewer")
+    .map((m) => `<option value="${m.id}" ${i.assignee && i.assignee.id === m.id ? "selected" : ""}>${esc(m.username)} (${esc(m.role)})</option>`).join("");
+  box.innerHTML = `
+    <h2>#${i.id} ${esc(i.title)}</h2>
+    <div>${badge("p-" + i.priority, i.priority)} ${badge("s-" + i.status, i.status)} ${badge("", i.type)}</div>
+    <p class="mut">Team ${esc(i.team.name)} | you are <b>${esc(i.role)}</b> here | assignee: ${i.assignee ? esc(i.assignee.username) : "none"} | created by ${esc(i.created_by.username)} | due ${fmtDate(i.due_date)} | version ${i.version}</p>
+    <p style="white-space:pre-wrap">${esc(i.description) || '<span class="mut">No description.</span>'}</p>
+    <div class="row2">
+      ${p.claim ? `<button class="primary" data-act="claim">Claim</button>` : ""}
+      ${p.transitions.map((t) => `<button data-act="transition" data-to="${t}">&rarr; ${esc(label(t))}</button>`).join("")}
+    </div>
+    ${p.assign ? `<div class="row2"><select id="assignSel"><option value="">(unassigned)</option>${memberOpts}</select><button data-act="assign">Assign</button></div>` : ""}
+    ${p.edit ? `<details><summary>Edit</summary><form id="editForm">
+      <label>Title</label><input name="title" value="${esc(i.title)}" style="width:100%" maxlength="200">
+      <div class="row2">
+        <select name="priority">${["low", "medium", "high", "urgent"].map((x) => `<option ${x === i.priority ? "selected" : ""}>${x}</option>`).join("")}</select>
+        <select name="type">${["incident", "customer_issue", "payment", "compliance", "task"].map((x) => `<option ${x === i.type ? "selected" : ""}>${x}</option>`).join("")}</select>
+        <input type="date" name="due_date" value="${esc(i.due_date || "")}">
+      </div>
+      <label>Description</label><textarea name="description">${esc(i.description)}</textarea>
+      <div class="row2"><button class="primary" type="submit">Save changes</button></div></form></details>` : ""}
+    <h3 style="margin-bottom:4px">Activity</h3>
+    ${p.comment ? `<form id="commentForm" class="row2"><input name="text" placeholder="Add a comment" style="flex:1" maxlength="2000" required><button type="submit">Comment</button></form>` : ""}
+    <ul class="timeline">${S.events.map((e) => `<li><span class="mut">${esc(new Date(e.created_at).toLocaleString())}</span> <b>${esc(e.actor ? e.actor.username : "system")}</b> ${fmtEvent(e)}</li>`).join("")}</ul>
+    ${S.eventsNext ? `<button data-act="moreEvents">Older activity</button>` : ""}`;
+}
+
+// ---------------------------------------------------------------- actions (optimistic UI with rollback)
+function fail(e, itemId) {
+  if (e.code === "version_conflict" || e.code === "already_claimed") {
+    showBanner("This item changed while you were working: " + e.message + " Reload to see the latest version.", { reloadId: itemId });
+  } else {
+    showBanner(e.message || "Something went wrong");
+  }
+}
+
+async function act(optimistic, request) {
+  if (S.busy || !S.cur) return;
+  S.busy = true;
+  showBanner("");
+  const id = S.cur.id;
+  const snapshot = JSON.parse(JSON.stringify(S.cur));
+  let refreshAfterAction = false;
+  const key = uuid(); // one key per click: a double click or network retry cannot apply the action twice
+  try {
+    optimistic(S.cur);
+    renderDetail(); // UI updates immediately...
+    const fresh = await request(key);
+    S.cur = fresh; // ...and is replaced by the server's truth
+    S.items = S.items.map((x) => (x.id === fresh.id ? fresh : x));
+    renderDetail(); renderList();
+    refreshAfterAction = true;
+  } catch (e) {
+    S.cur = snapshot; // ...or rolled back with the server's reason
+    renderDetail();
+    fail(e, id);
+  } finally {
+    S.busy = false; // release the lock as soon as the main request is done
+  }
+  if (refreshAfterAction) Promise.all([loadEvents(true), loadCounts()]).catch(() => {});
+}
+
+const post = (path, body) => (key) => api(`/items/${S.cur.id}${path}`, { method: "POST", body, key });
+
+// ---------------------------------------------------------------- events
+document.addEventListener("click", async (ev) => {
+  const el = ev.target.closest("[data-act]");
+  if (!el) { const dd = $("#notifs"); if (dd && !ev.target.closest("#notifs")) dd.hidden = true; return; }
+  const act_ = el.dataset.act;
+  try {
+    if (act_ === "logout") logout();
+    else if (act_ === "dismiss") showBanner("");
+    else if (act_ === "reload") await openItem(Number(el.dataset.id));
+    else if (act_ === "open") await openItem(Number(el.dataset.id));
+    else if (act_ === "more") await loadList(false);
+    else if (act_ === "moreEvents") await loadEvents(false);
+    else if (act_ === "view") { S.view = el.dataset.view; renderViews(); await loadList(true); }
+    else if (act_ === "bell") {
+      const dd = $("#notifs");
+      dd.hidden = !dd.hidden;
+      dd.innerHTML = S.notifs.length ? S.notifs.map((n) => `<div data-act="open" data-id="${n.item_id}">${esc(n.message)}<br><span class="mut">${esc(new Date(n.created_at).toLocaleString())}</span></div>`).join("") : '<div class="mut">No notifications</div>';
+      if (S.notifs.length) sessionStorage.setItem("seenNotif", String(S.notifs[0].id));
+      ev.stopPropagation(); loadNotifs();
+    }
+    else if (act_ === "claim") {
+      await act((i) => { i.assignee = { id: S.me.id, username: S.me.username }; i.permissions.claim = false; }, post("/claim"));
+    } else if (act_ === "transition") {
+      const to = el.dataset.to;
+      await act((i) => { i.status = to; i.permissions.transitions = []; }, post("/transition", { to, version: S.cur.version }));
+    } else if (act_ === "assign") {
+      const v = $("#assignSel").value;
+      const m = S.members.find((x) => String(x.id) === v);
+      await act((i) => { i.assignee = m ? { id: m.id, username: m.username } : null; }, post("/assign", { assignee_id: v ? Number(v) : null, version: S.cur.version }));
+    }
+  } catch (e) { showBanner(e.message); }
+});
+
+document.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const form = ev.target;
+  if (form.id === "loginForm") {
+    const f = new FormData(form);
+    try {
+      const out = await api("/auth/login", { method: "POST", body: { username: f.get("username"), password: f.get("password") } });
+      S.token = out.token; sessionStorage.setItem("token", out.token);
+      await start();
+    } catch (e) { $("#loginMsg").textContent = e.message; }
+  } else if (form.id === "newForm") {
+    const f = new FormData(form);
+    const body = { title: f.get("title"), description: f.get("description"), type: f.get("type"), priority: f.get("priority"), team_id: Number(f.get("team_id")), due_date: f.get("due_date") || null };
+    S.createKey = S.createKey || uuid(); // reused on retry so a re-submit can never create a duplicate
+    const btn = $("#createBtn"); btn.disabled = true;
+    try {
+      const item = await api("/items", { method: "POST", body, key: S.createKey });
+      S.createKey = null; form.reset();
+      await Promise.all([loadList(true), loadCounts()]);
+      await openItem(item.id);
+    } catch (e) { showBanner(e.message); } finally { btn.disabled = false; }
+  } else if (form.id === "editForm") {
+    const f = new FormData(form);
+    const body = { version: S.cur.version, title: f.get("title"), description: f.get("description"), type: f.get("type"), priority: f.get("priority"), due_date: f.get("due_date") || null };
+    await act((i) => Object.assign(i, { title: body.title, description: body.description, type: body.type, priority: body.priority, due_date: body.due_date }),
+      (key) => api(`/items/${S.cur.id}`, { method: "PATCH", body, key }));
+  } else if (form.id === "commentForm") {
+    const text = new FormData(form).get("text");
+    try {
+      await api(`/items/${S.cur.id}/comments`, { method: "POST", body: { text }, key: uuid() });
+      await loadEvents(true);
+    } catch (e) { fail(e, S.cur && S.cur.id); }
+  }
+});
+
+let qTimer = null;
+document.addEventListener("input", (ev) => {
+  if (ev.target.closest("#filters") && ev.target.name === "q") { clearTimeout(qTimer); qTimer = setTimeout(() => loadList(true), 300); }
+});
+document.addEventListener("change", (ev) => {
+  if (ev.target.closest("#filters") && ev.target.name !== "q") loadList(true);
+});
+
+// ---------------------------------------------------------------- start
+async function start() {
+  if (!S.token) return showLogin();
+  try { S.me = await api("/me"); } catch { return; }
+  showShell(); renderViews();
+  await Promise.all([loadCounts(), loadList(true), loadNotifs()]);
+  if (S.timer) clearInterval(S.timer);
+  S.timer = setInterval(() => { loadCounts().catch(() => {}); loadNotifs().catch(() => {}); }, 15000); // polling is enough here
+}
+start();
+</script>
+</body>
+</html>
